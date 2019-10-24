@@ -25,6 +25,8 @@ class Player(object):
         self.right = False
         self.walkCount = 0
         self.standing = True
+        self.hitbox = (self.x + 17, self.y + 11, 29, 52)
+        self.score = 0
 
     def draw(self, win):
         if self.walkCount + 1 >= 27:  # 27 images
@@ -42,6 +44,31 @@ class Player(object):
                 win.blit(self.walkRight[0], (self.x, self.y))
             else:
                 win.blit(self.walkLeft[0], (self.x, self.y))
+        self.hitbox = (self.x + 17, self.y + 11, 29, 52)
+        # pygame.draw.rect(win, (255, 0, 0), self.hitbox, 2)
+
+    def hit(self, win):
+        # Reset character
+        self.isJump = False
+        self.jumpCount = 10
+        self.x = 60
+        self.y = 410
+        self.walkCount = 0
+        font1 = pygame.font.SysFont('comicsans', 100)
+        text = font1.render('-25', 1, (255, 0, 0))
+        self.score -= 25
+        win.blit(text, (250 - text.get_width()/2, 250/2 - text.get_height()/2))
+        pygame.display.update()
+
+        # Delay
+        i = 0
+        while i < 100:
+            pygame.time.delay(10)
+            i += 1
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    i = 301
+                    pygame.quit()
 
 
 class Projectile(object):
@@ -80,18 +107,29 @@ class Enemy(object):
         self.path = [self.x, self.end]
         self.walkCount = 0
         self.velocity = 3
+        self.hitbox = (self.x + 17, self.y + 2, 31, 57)
+        self.health = 100
+        self.visible = True
 
     def draw(self, win):
         self.move()
-        if self.walkCount + 1 >= 33:
-            self.walkCount = 0
 
-        if self.velocity > 0:
-            win.blit(self.walkRight[self.walkCount // 3], (self.x, self.y))
-            self.walkCount += 1
-        else:
-            win.blit(self.walkLeft[self.walkCount // 3], (self.x, self.y))
-            self.walkCount += 1
+        if self.visible:
+            if self.walkCount + 1 >= 33:
+                self.walkCount = 0
+
+            if self.velocity > 0:
+                win.blit(self.walkRight[self.walkCount // 3], (self.x, self.y))
+                self.walkCount += 1
+            else:
+                win.blit(self.walkLeft[self.walkCount // 3], (self.x, self.y))
+                self.walkCount += 1
+
+            # Health bar
+            pygame.draw.rect(win, (255, 0, 0), (self.hitbox[0], self.hitbox[1] - 20, 50, 10))
+            pygame.draw.rect(win, (0, 125, 0), (self.hitbox[0], self.hitbox[1] - 20, 0.5 * self.health, 10))
+            self.hitbox = (self.x + 17, self.y + 2, 31, 57)
+            # pygame.draw.rect(win, (255, 0, 0), self.hitbox, 2)
 
     def move(self):
         if self.velocity > 0:
@@ -106,3 +144,9 @@ class Enemy(object):
             else:
                 self.velocity *= -1
                 self.walkCount = 0
+
+    def hit(self):
+        if self.health > 10:
+            self.health -= 10
+        else:
+            self.visible = False

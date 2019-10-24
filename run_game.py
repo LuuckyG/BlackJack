@@ -13,25 +13,48 @@ pygame.display.set_caption("First Game")
 bg = pygame.image.load('images/bg.jpg')  # Background
 char = pygame.image.load('images/standing.png')
 
+# Load sounds
+bulletSound = pygame.mixer.Sound('media/bullet.wav')
+hitSound = pygame.mixer.Sound('media/hit.wav')
+music = pygame.mixer.music.load('media/music.mp3')
+pygame.mixer.music.play(-1)
+
 clock = pygame.time.Clock()
 
 
 def redraw_game_window():
     window.blit(bg, (0, 0))
-    man.draw(window)
+    text = font.render("Score: " + str(player.score), 1, (0, 0, 0))
+    window.blit(text, (360, 10))
+    player.draw(window)
     goblin.draw(window)
     for bullet in bullets:
         bullet.draw(window)
     pygame.display.update()
 
 
-# Main loop
-man = Player(300, 410, 64, 64)
+# Game 'items'
+font = pygame.font.SysFont("comicsans", 30, True)
+player = Player(300, 410, 64, 64)
 goblin = Enemy(100, 410, 64, 64, 450)
 bullets = []
+shootLoop = 0
+
+# Main loop
 run = True
 while run:
     clock.tick(27)
+    if goblin.visible:
+        if player.hitbox[1] < goblin.hitbox[1] + goblin.hitbox[-1] \
+                and player.hitbox[1] + player.hitbox[-1] > goblin.hitbox[1]:
+            if player.hitbox[0] + player.hitbox[-2] > goblin.hitbox[0] \
+                    and player.hitbox[0] < goblin.hitbox[0] + goblin.hitbox[-2]:
+                player.hit(window)
+
+    if shootLoop > 0:
+        shootLoop += 1
+    if shootLoop > 3:
+        shootLoop = 0
 
     # Checking for events
     for event in pygame.event.get():
@@ -39,6 +62,16 @@ while run:
             run = False
 
     for bullet in bullets:
+        if goblin.visible:
+            if bullet.y - bullet.radius < goblin.hitbox[1] + goblin.hitbox[-1] \
+                    and bullet.y + bullet.radius > goblin.hitbox[1]:
+                if bullet.x + bullet.radius > goblin.hitbox[0] \
+                        and bullet.x - bullet.radius < goblin.hitbox[0] + goblin.hitbox[-2]:
+                    hitSound.play()
+                    goblin.hit()
+                    bullets.pop(bullets.index(bullet))
+                    player.score += 1
+
         if screenWidth > bullet.x > 0:
             bullet.x += bullet.velocity
         else:
@@ -46,46 +79,48 @@ while run:
 
     keys = pygame.key.get_pressed()
 
-    if keys[pygame.K_SPACE]:
-        if man.left:
+    if keys[pygame.K_SPACE] and shootLoop == 0:
+        bulletSound.play()
+        if player.left:
             facing = -1
         else:
             facing = 1
 
         if len(bullets) < 5:
-            bullets.append(Projectile(round(man.x + man.width // 2), round(man.y + man.height // 2),
-                                      radius=6, color=(1, 1, 0), facing=facing))
+            bullets.append(Projectile(round(player.x + player.width // 2), round(player.y + player.height // 2),
+                                      radius=6, color=(255, 0, 0), facing=facing))
+        shootLoop = 1
 
-    if keys[pygame.K_LEFT] and man.x > man.velocity:
-        man.x -= man.velocity
-        man.left = True
-        man.right = False
-        man.standing = False
-    elif keys[pygame.K_RIGHT] and man.x < screenWidth - man.velocity:
-        man.x += man.velocity
-        man.left = False
-        man.right = True
-        man.standing = False
+    if keys[pygame.K_LEFT] and player.x > player.velocity:
+        player.x -= player.velocity
+        player.left = True
+        player.right = False
+        player.standing = False
+    elif keys[pygame.K_RIGHT] and player.x < screenWidth - player.velocity:
+        player.x += player.velocity
+        player.left = False
+        player.right = True
+        player.standing = False
     else:
-        man.standing = True
-        man.walkCount = 0
+        player.standing = True
+        player.walkCount = 0
 
-    if not man.isJump:
+    if not player.isJump:
         if keys[pygame.K_UP]:
-            man.isJump = True
-            man.left = False
-            man.right = False
-            man.walkCount = 0
+            player.isJump = True
+            player.left = False
+            player.right = False
+            player.walkCount = 0
     else:
-        if man.jumpCount >= -10:
+        if player.jumpCount >= -10:
             neg = 1
-            if man.jumpCount < 0:
+            if player.jumpCount < 0:
                 neg = -1
-            man.y -= (man.jumpCount ** 2) * 0.5 * neg
-            man.jumpCount -= 1
+            player.y -= (player.jumpCount ** 2) * 0.5 * neg
+            player.jumpCount -= 1
         else:
-            man.isJump = False
-            man.jumpCount = 10
+            player.isJump = False
+            player.jumpCount = 10
 
     redraw_game_window()
 
